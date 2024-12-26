@@ -254,6 +254,8 @@ State :: struct {
     dt:                   f32,
 
     count_clusters_sizes: [CLUSTER_SIZE + 1]int,
+
+    font:                 rl.Font,
 }
 
 // --- Global Variables ---
@@ -1922,6 +1924,37 @@ generate_world :: proc() {
     boulder_generation()
 }
 
+draw_ui :: proc() {
+    fps := fmt.tprintf("%v", rl.GetFPS())
+    fps_size := ui_measure_text(fps)
+    fps_pos := rl.Vector2{0, f32(s.window_height) - fps_size.y}
+    ui_text(fps_pos, fps)
+
+    ui_window_begin("Stood On")
+    ui_window_text(building_to_string(building_at(s.player.pos)))
+    ore := &s.ores[s.player.pos.x][s.player.pos.y].(Ore)
+    #partial switch ore.type {
+        case .None:
+            ui_window_text("None")
+        case:
+            ui_window_text(fmt.tprintf("%v: %v", ore.type, ore.count))
+    }
+    ui_window_end()
+
+    ui_window_begin("Base")
+    for ore_tile in OreType {
+        ui_window_text(fmt.tprintf("%v: %v", ore_tile, s.base.ores[ore_tile]))
+    }
+    ui_window_end()
+
+    ui_window_begin("test")
+    ui_window_end()
+
+    ui_render()
+
+    free_all(context.temp_allocator)
+}
+
 main :: proc() {
     rl.InitWindow(s.window_width, s.window_height, "nucoib")
     rl.SetWindowState({.WINDOW_RESIZABLE})
@@ -1929,13 +1962,16 @@ main :: proc() {
     rl.SetExitKey(.KEY_NULL)
 
     err: runtime.Allocator_Error
-    s.ores, err = new(Ores)
 
+    s.ores, err = new(Ores)
+    defer free(s.ores)
     if err != nil {
         nucoib_errorfln("Buy MORE RAM! --> %v", err)
         nucoib_errorfln("Need memory: %v bytes", size_of(Ores))
     }
+
     s.buildings, err = new(Buildings)
+    defer free(s.buildings)
     if err != nil {
         nucoib_errorfln("Buy MORE RAM! --> %v", err)
         nucoib_errorfln("Need memory: %v bytes", size_of(Buildings))
@@ -1949,6 +1985,7 @@ main :: proc() {
     nucoib_logfln("  - Buildings: %v Mb (%.2v%%)", buildings_size, buildings_size / total_size * 100)
 
     s.font_texture = rl.LoadTexture("./atlas.png")
+    defer rl.UnloadTexture(s.font_texture)
 
     s.blank_texture_rec = {
         x = (RUNE_COLS - 1) * RUNE_WIDTH,
@@ -1956,6 +1993,11 @@ main :: proc() {
         width = RUNE_WIDTH,
         height = RUNE_HEIGHT,
     }
+
+    s.font = rl.LoadFontEx("./Menlo-Regular.ttf", 96, nil, 0)
+    rl.GenTextureMipmaps(&s.font.texture)
+    rl.SetTextureFilter(s.font.texture, .BILINEAR)
+    defer rl.UnloadFont(s.font)
 
     recalculate_grid_size()
 
@@ -1985,6 +2027,9 @@ main :: proc() {
         }
     }
 
+    ui_init()
+    defer ui_finish()
+
     for !rl.WindowShouldClose() {
         rl.BeginDrawing()
         s.dt = rl.GetFrameTime()
@@ -1992,6 +2037,7 @@ main :: proc() {
         input()
         update()
         draw()
+        draw_ui()
         rl.EndDrawing()
     }
 }
