@@ -237,7 +237,7 @@ State :: struct {
     pressed_dig:          f32,
 
     selected_ore:         OreType,
-    selected_building:    int,
+    selected_building:    BuildingType,
     selected_slot:        int,
     selected_drill:       ^Drill,
 
@@ -569,108 +569,108 @@ input :: proc() {
         s.panels[.Building].active = !s.panels[.Building].active
     }
 
-    if s.panels[.Building].active {
-        mouse_pos := rl.GetMousePosition()
-        origin := rl.Vector2{
-            s.panels[.Building].rect.x,
-            s.panels[.Building].rect.y,
-        }
-        origin += {RUNE_WIDTH, RUNE_HEIGHT} * UI_SCALE
-        row := int((mouse_pos.y - origin.y) / RUNE_HEIGHT / UI_SCALE)
-        if row >= 0 &&
-            row < int(s.panels[.Building].rect.height / RUNE_HEIGHT / UI_SCALE) - 2 &&
-            mouse_pos.x >= origin.x &&
-            mouse_pos.x <= origin.x + s.panels[.Building].rect.width - RUNE_WIDTH * UI_SCALE
-        {
-            s.selected_building = row
-        }
-    }
+    // if s.panels[.Building].active {
+    //     mouse_pos := rl.GetMousePosition()
+    //     origin := rl.Vector2{
+    //         s.panels[.Building].rect.x,
+    //         s.panels[.Building].rect.y,
+    //     }
+    //     origin += {RUNE_WIDTH, RUNE_HEIGHT} * UI_SCALE
+    //     row := int((mouse_pos.y - origin.y) / RUNE_HEIGHT / UI_SCALE)
+    //     if row >= 0 &&
+    //         row < int(s.panels[.Building].rect.height / RUNE_HEIGHT / UI_SCALE) - 2 &&
+    //         mouse_pos.x >= origin.x &&
+    //         mouse_pos.x <= origin.x + s.panels[.Building].rect.width - RUNE_WIDTH * UI_SCALE
+    //     {
+    //         s.selected_building = row
+    //     }
+    // }
 
-    if rl.IsKeyDown(.SPACE) {
-        count: int
-        building_type: BuildingType
-        for building in BuildingType {
-            if can_build(building) {
-                count += 1
-            }
-            if count - 1 == s.selected_building {
-                building_type = building
-                break
-            }
-        }
-        assert(building_type != .None)
+    // if rl.IsKeyDown(.SPACE) {
+    //     count: int
+    //     building_type: BuildingType
+    //     for building in BuildingType {
+    //         if can_build(building) {
+    //             count += 1
+    //         }
+    //         if count - 1 == s.selected_building {
+    //             building_type = building
+    //             break
+    //         }
+    //     }
+    //     assert(building_type != .None)
 
-        build: switch building_type {
-            case .Drill:
-                if check_boundaries(s.player.pos + 1, WORLD_RECT) {
-                    x := s.player.pos.x
-                    y := s.player.pos.y
-                    for i := x; i < x + 2; i += 1 {
-                        for j := y; j < y + 2; j += 1 {
-                            _, ok := s.ores[i][j].(Boulder)
-                            if s.buildings[i][j].type != .None || ok do break build
-                        }
-                    }
-                    if try_build(Drill) {
-                        s.buildings[x + 1][y + 0].type = .Part
-                        s.buildings[x + 1][y + 1].type = .Part
-                        s.buildings[x + 0][y + 1].type = .Part
-                        s.buildings[x + 0][y + 0].type = .Drill
-                        s.buildings[x + 1][y + 0].as.part = {s.player.pos}
-                        s.buildings[x + 1][y + 1].as.part = {s.player.pos}
-                        s.buildings[x + 0][y + 1].as.part = {s.player.pos}
-                        s.buildings[x + 0][y + 0].as.drill = {direction = s.direction}
-                    }
-                }
-            case .Conveyor:
-                building := building_ptr_at(s.player.pos)
+    //     build: switch building_type {
+    //         case .Drill:
+    //             if check_boundaries(s.player.pos + 1, WORLD_RECT) {
+    //                 x := s.player.pos.x
+    //                 y := s.player.pos.y
+    //                 for i := x; i < x + 2; i += 1 {
+    //                     for j := y; j < y + 2; j += 1 {
+    //                         _, ok := s.ores[i][j].(Boulder)
+    //                         if s.buildings[i][j].type != .None || ok do break build
+    //                     }
+    //                 }
+    //                 if try_build(Drill) {
+    //                     s.buildings[x + 1][y + 0].type = .Part
+    //                     s.buildings[x + 1][y + 1].type = .Part
+    //                     s.buildings[x + 0][y + 1].type = .Part
+    //                     s.buildings[x + 0][y + 0].type = .Drill
+    //                     s.buildings[x + 1][y + 0].as.part = {s.player.pos}
+    //                     s.buildings[x + 1][y + 1].as.part = {s.player.pos}
+    //                     s.buildings[x + 0][y + 1].as.part = {s.player.pos}
+    //                     s.buildings[x + 0][y + 0].as.drill = {direction = s.direction}
+    //                 }
+    //             }
+    //         case .Conveyor:
+    //             building := building_ptr_at(s.player.pos)
 
-                if building.type == .Conveyor && building.as.conveyor.direction != s.direction {
-                    building.as.conveyor.direction = s.direction
-                }
-                if building.type == .None && try_build(Conveyor) {
-                    building.type = .Conveyor
-                    building.as.conveyor = {direction = s.direction}
-                }
+    //             if building.type == .Conveyor && building.as.conveyor.direction != s.direction {
+    //                 building.as.conveyor.direction = s.direction
+    //             }
+    //             if building.type == .None && try_build(Conveyor) {
+    //                 building.type = .Conveyor
+    //                 building.as.conveyor = {direction = s.direction}
+    //             }
 
-            case .Splitter:
-                building := building_ptr_at(s.player.pos)
+    //         case .Splitter:
+    //             building := building_ptr_at(s.player.pos)
 
-                if (building.type == .Splitter && building.as.splitter.direction != s.direction) {
-                    building.as.splitter.direction = s.direction
-                    building.as.splitter.next = s.direction
-                }
-                if building.type == .None && try_build(Splitter) {
-                    building.type = .Splitter
-                    building.as.splitter = {direction = s.direction, next = s.direction}
-                }
+    //             if (building.type == .Splitter && building.as.splitter.direction != s.direction) {
+    //                 building.as.splitter.direction = s.direction
+    //                 building.as.splitter.next = s.direction
+    //             }
+    //             if building.type == .None && try_build(Splitter) {
+    //                 building.type = .Splitter
+    //                 building.as.splitter = {direction = s.direction, next = s.direction}
+    //             }
 
-            case .CoalStation:
-                if check_boundaries(s.player.pos + 1, WORLD_RECT) {
-                    x := s.player.pos.x
-                    y := s.player.pos.y
-                    for i := x; i < x + 2; i += 1 {
-                        for j := y; j < y + 2; j += 1 {
-                            _, ok := s.ores[i][j].(Boulder)
-                            if s.buildings[i][j].type != .None || ok do break build
-                        }
-                    }
-                    if try_build(CoalStation) {
-                        s.buildings[x + 1][y + 0].type = .Part
-                        s.buildings[x + 1][y + 1].type = .Part
-                        s.buildings[x + 0][y + 1].type = .Part
-                        s.buildings[x + 0][y + 0].type = .CoalStation
-                        s.buildings[x + 1][y + 0].as.part = {s.player.pos}
-                        s.buildings[x + 1][y + 1].as.part = {s.player.pos}
-                        s.buildings[x + 0][y + 1].as.part = {s.player.pos}
-                        s.buildings[x + 0][y + 0].as.coal_station = {}
-                    }
-                }
-            case .None:
-            case .Base:
-            case .Part:
-        }
-    }
+    //         case .CoalStation:
+    //             if check_boundaries(s.player.pos + 1, WORLD_RECT) {
+    //                 x := s.player.pos.x
+    //                 y := s.player.pos.y
+    //                 for i := x; i < x + 2; i += 1 {
+    //                     for j := y; j < y + 2; j += 1 {
+    //                         _, ok := s.ores[i][j].(Boulder)
+    //                         if s.buildings[i][j].type != .None || ok do break build
+    //                     }
+    //                 }
+    //                 if try_build(CoalStation) {
+    //                     s.buildings[x + 1][y + 0].type = .Part
+    //                     s.buildings[x + 1][y + 1].type = .Part
+    //                     s.buildings[x + 0][y + 1].type = .Part
+    //                     s.buildings[x + 0][y + 0].type = .CoalStation
+    //                     s.buildings[x + 1][y + 0].as.part = {s.player.pos}
+    //                     s.buildings[x + 1][y + 1].as.part = {s.player.pos}
+    //                     s.buildings[x + 0][y + 1].as.part = {s.player.pos}
+    //                     s.buildings[x + 0][y + 0].as.coal_station = {}
+    //                 }
+    //             }
+    //         case .None:
+    //         case .Base:
+    //         case .Part:
+    //     }
+    // }
 
     if rl.IsKeyPressed(.E) && !s.panels[.Building].active {
         if s.panels[.Use].active {
@@ -1930,7 +1930,7 @@ draw_ui :: proc() {
     fps_pos := rl.Vector2{0, f32(s.window_height) - fps_size.y}
     ui_text(fps_pos, fps)
 
-    ui_window_begin("Stood On")
+    ui_window_begin({}, {200, 50})
     ui_window_text(building_to_string(building_at(s.player.pos)))
     ore := &s.ores[s.player.pos.x][s.player.pos.y].(Ore)
     #partial switch ore.type {
@@ -1941,16 +1941,48 @@ draw_ui :: proc() {
     }
     ui_window_end()
 
-    ui_window_begin("Base")
+    base_window_width := f32(150)
+    ui_window_begin({f32(s.window_width) - base_window_width, 0}, {base_window_width, 150})
     for ore_tile in OreType {
         ui_window_text(fmt.tprintf("%v: %v", ore_tile, s.base.ores[ore_tile]))
     }
     ui_window_end()
 
-    ui_window_begin("test")
+    ui_window_begin({0, 300}, {200, 200})
+    if ui_window_button("Drill") {
+        s.selected_building = .Drill
+    }
+    if ui_window_button("Conveyor") {
+        s.selected_building = .Conveyor
+    }
+    if ui_window_button("Splitter") {
+        s.selected_building = .Splitter
+    }
+    if ui_window_button("Coal Station") {
+        s.selected_building = .CoalStation
+    }
     ui_window_end()
 
-    ui_render()
+    angle := f32(s.direction) * 90
+    #partial switch s.selected_building {
+        case .Drill:
+            dest := new_rect(rl.GetMousePosition(), TILE_DRILL_SIZE)
+            draw_sprite_pro(TILE_DRILL, dest, BG_COLOR, DRILL_COLOR, false, angle)
+        case .Conveyor:
+            dest := new_rect(rl.GetMousePosition(), TILE_CONVEYOR_SIZE)
+            draw_sprite_pro(TILE_CONVEYOR, dest, BG_COLOR, CONVEYOR_COLOR, false, angle)
+        case .Splitter:
+            dest := new_rect(rl.GetMousePosition(), TILE_SPLITTER_SIZE)
+            draw_sprite_pro(TILE_SPLITTER, dest, BG_COLOR, SPLITTER_COLOR, false, angle)
+        case .CoalStation:
+            dest := new_rect(rl.GetMousePosition(), TILE_COAL_STATION_SIZE)
+            draw_sprite_pro(TILE_COAL_STATION, dest, BG_COLOR, COAL_STATION_COLOR, false, angle)
+        case:
+    }
+
+    if rl.IsMouseButtonDown(.RIGHT) {
+        s.selected_building = .None
+    }
 
     free_all(context.temp_allocator)
 }
